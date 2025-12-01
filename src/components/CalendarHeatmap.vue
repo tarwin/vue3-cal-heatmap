@@ -17,6 +17,7 @@ import {
   Month,
   TooltipFormatter,
   Value,
+  ColorScaleType,
 } from "@/components/Heatmap";
 import tippy, {
   createSingleton,
@@ -85,6 +86,10 @@ export default /*#__PURE__*/ defineComponent({
       type: [String, Array] as PropType<string | string[]>,
       default: "",
     },
+    colorScale: {
+      type: String as PropType<ColorScaleType>,
+      default: 'linear',
+    },
   },
   emits: ["dayClick"],
   setup(props) {
@@ -100,7 +105,14 @@ export default /*#__PURE__*/ defineComponent({
       svg = ref<null | SVGElement>(null),
       now = ref(new Date()),
       heatmap = ref(
-        new Heatmap(props.endDate as Date, props.values, props.max, props.rangeColor, props.startWeekday)
+        new Heatmap(
+          props.endDate as Date,
+          props.values,
+          props.max,
+          props.rangeColor,
+          props.startWeekday,
+          props.colorScale
+        )
       ),
       width = ref(0),
       height = ref(0),

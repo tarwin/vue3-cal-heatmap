@@ -33,6 +33,8 @@ export interface Locale {
 
 export type TooltipFormatter = (item: CalendarItem, unit: string) => string;
 
+export type ColorScaleType = 'linear' | 'percentile' | 'logarithmic';
+
 export class Heatmap {
   static readonly DEFAULT_RANGE_COLOR_LIGHT = [
     "#ebedf0",
@@ -92,12 +94,23 @@ export class Heatmap {
   private _activities?: Activities;
   private _calendar?: Calendar;
 
-  constructor(endDate: Date | string, values: Value[], max?: number, colorRange: string[] = Heatmap.DEFAULT_RANGE_COLOR_LIGHT, startWeekday: number = 0) {
+  colorScale: ColorScaleType;
+  private _percentileThresholds?: number[];
+
+  constructor(
+    endDate: Date | string,
+    values: Value[],
+    max?: number,
+    colorRange: string[] = Heatmap.DEFAULT_RANGE_COLOR_LIGHT,
+    startWeekday: number = 0,
+    colorScale: ColorScaleType = 'linear'
+  ) {
     this.endDate = this.parseDate(endDate);
     this.max =
       max || Math.ceil((Math.max(...values.map((day) => day.count)) / 5) * 4);
     this.startWeekday  = startWeekday;
     this.colorRange = colorRange;
+    this.colorScale = colorScale;
     this.startDate = this.shiftDate(endDate, -Heatmap.DAYS_IN_ONE_YEAR);
     this._values = values;
   }
@@ -108,6 +121,7 @@ export class Heatmap {
     this._firstFullWeekOfMonths = undefined;
     this._calendar = undefined;
     this._activities = undefined;
+    this._percentileThresholds = undefined;
   }
 
   get values(): Value[] {
@@ -176,23 +190,6 @@ export class Heatmap {
     return this._firstFullWeekOfMonths;
   }
 
-  getColorIndex(count?: number) {
-    if (count === null || count === undefined) {
-      return 0;
-    } else if (count <= 0) {
-      return 1;
-		} else if (count >= this.max) { // TODO max range exclusive flag
-			return this.colorRange.length - 1;
-    } else {
-      // Old way of calculating colorIndex
-      // return Math.ceil(((count * 100) / this.max) * 0.03) + 1;
-
-      const percentage = ((count * 100) / this.max)  / 100;
-      const colorIndex = Math.floor(percentage * (this.colorRange.length - 2)) + 1;
-      return colorIndex;
-    }
-  }
-
   getCountEmptyDaysAtStart() {
     return this.startDate.getDay();
   }
@@ -231,5 +228,89 @@ export class Heatmap {
       String(day.getMonth()).padStart(2, "0") +
       String(day.getDate()).padStart(2, "0")
     );
+  }
+
+  private get percentileThresholds(): number[] {
+    if (!this._percentileThresholds) {
+      const counts = this._values
+        .map(v => v.count)
+        .filter(c => c > 0)
+        .sort((a, b) => a - b);
+      
+      if (counts.length === 0) {
+        this._percentileThresholds = [];
+        return this._percentileThresholds;
+      }
+
+      const numBuckets = this.colorRange.length - 1; // exclude "no data" color
+      this._percentileThresholds = [];
+      
+      for (let i = 1; i < numBuckets; i++) {
+        const percentile = i / numBuckets;
+        const index = Math.floor(percentile * counts.length);
+        this._percentileThresholds.push(counts[Math.min(index, counts.length - 1)]);
+      }
+    }
+    return this._percentileThresholds;
+  }
+
+  // getColorIndex(count?: number) {
+  //   if (count === null || count === undefined) {
+  //     return 0;
+  //   } else if (count <= 0) {
+  //     return 1;
+	// 	} else if (count >= this.max) { // TODO max range exclusive flag
+	// 		return this.colorRange.length - 1;
+  //   } else {
+  //     // Old way of calculating colorIndex
+  //     // return Math.ceil(((count * 100) / this.max) * 0.03) + 1;
+
+  //     const percentage = ((count * 100) / this.max)  / 100;
+  //     const colorIndex = Math.floor(percentage * (this.colorRange.length - 2)) + 1;
+  //     return colorIndex;
+  //   }
+  // }
+
+  getColorIndex(count?: number) {
+    if (count === null || count === undefined) {
+      return 0;
+    } else if (count <= 0) {
+      return 1;
+    } else if (count >= this.max) {
+      return this.colorRange.length - 1;
+    }
+
+    switch (this.colorScale) {
+      case 'percentile':
+        return this.getPercentileColorIndex(count);
+      case 'logarithmic':
+        return this.getLogarithmicColorIndex(count);
+      default:
+        return this.getLinearColorIndex(count);
+    }
+  }
+
+  private getLinearColorIndex(count: number): number {
+    const percentage = count / this.max;
+    return Math.floor(percentage * (this.colorRange.length - 2)) + 1;
+  }
+
+  private getPercentileColorIndex(count: number): number {
+    const thresholds = this.percentileThresholds;
+    if (thresholds.length === 0) return 1;
+    
+    for (let i = 0; i < thresholds.length; i++) {
+      if (count <= thresholds[i]) {
+        return i + 1;
+      }
+    }
+    return this.colorRange.length - 1;
+  }
+
+  private getLogarithmicColorIndex(count: number): number {
+    const logCount = Math.log(count + 1);
+    const logMax = Math.log(this.max + 1);
+    const percentage = logCount / logMax;
+    return Math.floor(percentage * (this.colorRange.length - 2)) + 1;
   }
 }

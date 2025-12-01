@@ -117,6 +117,33 @@
       :show-weekdays="false"
       :as-dots="true"
     />
+    <br />
+    <h4>Color Scale: "linear"</h4>
+    <calendar-heatmap
+      :values="values"
+      :end-date="endDate"
+      :style="{ 'max-width': '675px' }"
+      no-data-text="NOTHING"
+      colorScale="linear"
+    />
+    <br />
+    <h4>Color Scale: "percentile"</h4>
+    <calendar-heatmap
+      :values="values"
+      :end-date="endDate"
+      :style="{ 'max-width': '675px' }"
+      no-data-text="NOTHING"
+      colorScale="percentile"
+    />
+    <br />
+    <h4>Color Scale: "logarithmic"</h4>
+    <calendar-heatmap
+      :values="values"
+      :end-date="endDate"
+      :style="{ 'max-width': '675px' }"
+      no-data-text="NOTHING"
+      colorScale="logarithmic"
+    />
   </div>
 </template>
 

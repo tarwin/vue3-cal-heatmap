@@ -102,6 +102,18 @@ A css file is included when importing the package. You may have to setup your bu
 <calendar-heatmap :start-weekday="1" .../>
 ```
 
+### colorScale
+
+- Type: `string`
+- Required: false
+- Default: 'linear'
+
+Can be one of 'linear', 'percentile' or 'logarithmic'. Changes how colors are chosen.
+
+```html:no-line-numbers
+<calendar-heatmap color-scale="percentile" .../>
+```
+
 ### round
 
 - Type: `number` between `0` and `5`
