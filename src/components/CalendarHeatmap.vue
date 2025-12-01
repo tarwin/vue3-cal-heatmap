@@ -32,6 +32,10 @@ export default /*#__PURE__*/ defineComponent({
     endDate: {
       required: true,
     },
+    startWeekday: {
+      type: Number,
+      default: 0, // 0 for Sunday, 1 for Monday, etc.
+    },
     max: {
       type: Number,
     },
@@ -96,7 +100,7 @@ export default /*#__PURE__*/ defineComponent({
       svg = ref<null | SVGElement>(null),
       now = ref(new Date()),
       heatmap = ref(
-        new Heatmap(props.endDate as Date, props.values, props.max)
+        new Heatmap(props.endDate as Date, props.values, props.max, props.rangeColor, props.startWeekday)
       ),
       width = ref(0),
       height = ref(0),
@@ -112,6 +116,7 @@ export default /*#__PURE__*/ defineComponent({
             ? Heatmap.DEFAULT_RANGE_COLOR_DARK
             : Heatmap.DEFAULT_RANGE_COLOR_LIGHT)
       );
+    const DAYS_IN_WEEK = Heatmap.DAYS_IN_WEEK;
 
     const rounding = ref(props.round);
 
@@ -276,6 +281,7 @@ export default /*#__PURE__*/ defineComponent({
     return {
       SQUARE_BORDER_SIZE,
       SQUARE_SIZE,
+      DAYS_IN_WEEK,
       LEFT_SECTION_WIDTH,
       RIGHT_SECTION_WIDTH,
       TOP_SECTION_HEIGHT,
@@ -327,15 +333,17 @@ export default /*#__PURE__*/ defineComponent({
         :transform="daysLabelWrapperTransform"
         v-if="showWeekdays"
       >
-        <text class="vch__day__label" :x="0" :y="20">
-          {{ lo.days[1] }}
-        </text>
-        <text class="vch__day__label" :x="0" :y="44">
-          {{ lo.days[3] }}
-        </text>
-        <text class="vch__day__label" :x="0" :y="69">
-          {{ lo.days[5] }}
-        </text>
+        <template v-for="i in [0, 1, 2, 3, 4, 5, 6]">
+				  <text
+            class="vch__day__label"
+            :key="i"
+            v-if="(i + startWeekday) % 2 == 1"
+					  :x="0"
+					  :y="((SQUARE_SIZE - SQUARE_BORDER_SIZE) + SQUARE_SIZE * i)"
+				  >
+					{{ lo.days[ (i + startWeekday) % DAYS_IN_WEEK ] }}
+				  </text>
+        </template>
       </g>
 
       <g

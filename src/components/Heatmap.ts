@@ -83,17 +83,21 @@ export class Heatmap {
 
   startDate: Date;
   endDate: Date;
+  startWeekday: number;
   max: number;
+  colorRange: string[];
 
   private _values: Value[];
   private _firstFullWeekOfMonths?: Month[];
   private _activities?: Activities;
   private _calendar?: Calendar;
 
-  constructor(endDate: Date | string, values: Value[], max?: number) {
+  constructor(endDate: Date | string, values: Value[], max?: number, colorRange: string[] = Heatmap.DEFAULT_RANGE_COLOR_LIGHT, startWeekday: number = 0) {
     this.endDate = this.parseDate(endDate);
     this.max =
       max || Math.ceil((Math.max(...values.map((day) => day.count)) / 5) * 4);
+    this.startWeekday  = startWeekday;
+    this.colorRange = colorRange;
     this.startDate = this.shiftDate(endDate, -Heatmap.DAYS_IN_ONE_YEAR);
     this._values = values;
   }
@@ -177,15 +181,24 @@ export class Heatmap {
       return 0;
     } else if (count <= 0) {
       return 1;
-    } else if (count >= this.max) {
-      return 5;
+		} else if (count >= this.max) { // TODO max range exclusive flag
+			return this.colorRange.length - 1;
     } else {
-      return Math.ceil(((count * 100) / this.max) * 0.03) + 1;
+      // Old way of calculating colorIndex
+      // return Math.ceil(((count * 100) / this.max) * 0.03) + 1;
+
+      const percentage = ((count * 100) / this.max)  / 100;
+      const colorIndex = Math.floor(percentage * (this.colorRange.length - 2)) + 1;
+      return colorIndex;
     }
   }
 
   getCountEmptyDaysAtStart() {
     return this.startDate.getDay();
+  }
+
+  getDayOfWeek(day: Date) {
+    return (day.getDay() - this.startWeekday + Heatmap.DAYS_IN_WEEK) % Heatmap.DAYS_IN_WEEK;
   }
 
   getCountEmptyDaysAtEnd() {
